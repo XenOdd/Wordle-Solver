@@ -7,7 +7,7 @@ A sleek and intuitive helper tool for the popular word game, Wordle. Built with 
 ### 🚀 [**Live Demo**](https://xenodd.github.io/Wordle-Solver/)
 
 
-*(Feel free to replace this with your own screenshot!)*
+![Wordle Solver Screenshot](https://raw.githubusercontent.com/XenOdd/Wordle-Solver/main/screenshot.png)
 
 ## About The Project
 
