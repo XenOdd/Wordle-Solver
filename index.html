@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wordle Solver</title>
+    <style>
+        :root {
+            --bg-color: #33373E;
+            --text-color: #c5c8ce;
+            --shadow-light: rgba(255, 255, 255, 0.07);
+            --shadow-dark: rgba(0, 0, 0, 0.4);
+            --green-color: #538d4e;
+            --yellow-color: #b59f3b;
+            --gray-color: #3a3a3c;
+            --radius-l: 25px;
+            --radius-m: 15px;
+            --radius-s: 8px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center; 
+            padding: 20px;
+        }
+        
+        .header {
+            width: 100%;
+            text-align: center; 
+            margin-bottom: 40px;
+            padding-top: 20px;
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--text-color);
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            text-shadow: 2px 2px 4px var(--shadow-dark), -1px -1px 2px var(--shadow-light);
+        }
+
+        .main-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 40px;
+            width: 100%;
+            max-width: 950px;
+            justify-content: center;
+            flex: 1 0 auto;
+        }
+
+        .game-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+            flex: 1;
+            min-width: 360px;
+        }
+
+        .suggestions-panel {
+            flex: 1;
+            min-width: 320px;
+            max-width: 420px;
+            padding: 25px;
+            border-radius: var(--radius-l);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            background: var(--bg-color);
+            box-shadow: inset 7px 7px 14px var(--shadow-dark), inset -7px -7px 14px var(--shadow-light);
+        }
+
+        .neumorphic-btn {
+            border: none;
+            outline: none;
+            cursor: pointer;
+            color: var(--text-color);
+            background: var(--bg-color);
+            box-shadow: 6px 6px 12px var(--shadow-dark), -6px -6px 12px var(--shadow-light);
+            transition: all 0.15s ease-in-out;
+        }
+        .neumorphic-btn:active {
+            box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light);
+            transform: translateY(1px);
+        }
+        .neumorphic-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light);
+        }
+
+        .attempts-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .word-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .letter-container {
+            width: 60px;
+            height: 60px;
+            border-radius: var(--radius-m);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: inset 5px 5px 10px var(--shadow-dark), inset -5px -5px 10px var(--shadow-light);
+            transition: all 0.2s ease-in-out;
+        }
+
+        .letter-cell {
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text-color);
+            font-size: 2rem;
+            font-weight: bold;
+            text-align: center;
+            text-transform: uppercase;
+            caret-color: var(--green-color);
+        }
+        
+        .letter-container.filled {
+             box-shadow: 6px 6px 12px var(--shadow-dark), -6px -6px 12px var(--shadow-light);
+        }
+        .letter-container.green { background: var(--green-color); color: white; }
+        .letter-container.yellow { background: var(--yellow-color); color: white; }
+        .letter-container.gray { background: var(--gray-color); color: white; }
+
+        .letter-container.green,
+        .letter-container.yellow,
+        .letter-container.gray {
+            box-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+        }
+        .letter-container.green .letter-cell,
+        .letter-container.yellow .letter-cell,
+        .letter-container.gray .letter-cell {
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.4);
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .control-buttons {
+            display: flex;
+            gap: 20px;
+        }
+
+        .control-btn {
+            padding: 12px 24px;
+            border-radius: var(--radius-l);
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        
+        .keyboard-hint, .error-message {
+            font-size: 0.9rem;
+            opacity: 0.7;
+            height: 20px;
+            line-height: 20px;
+        }
+        
+        .error-message {
+            color: #f08080;
+        }
+
+        .suggestions-panel h3 {
+            text-align: center;
+            font-weight: 600;
+            font-size: 1.2rem;
+            letter-spacing: 1px;
+        }
+
+        .stats {
+            text-align: center;
+            font-size: 0.9rem;
+            opacity: 0.7;
+            min-height: 20px;
+        }
+
+        .word-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+            gap: 12px;
+            max-height: 380px;
+            overflow-y: auto;
+            padding: 5px;
+        }
+        .word-grid::-webkit-scrollbar { width: 8px; }
+        .word-grid::-webkit-scrollbar-track { background: transparent; }
+        .word-grid::-webkit-scrollbar-thumb {
+            background-color: var(--gray-color);
+            border-radius: 10px;
+            border: 2px solid var(--bg-color);
+        }
+
+        .word-item {
+            padding: 10px 5px;
+            border-radius: var(--radius-s);
+            text-align: center;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 1rem;
+            text-transform: uppercase;
+        }
+        .word-item:active {
+            transform: translateY(0);
+        }
+        .word-item.top {
+            color: white;
+            background: var(--green-color);
+        }
+
+        .footer {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center; 
+            align-items: center;
+            gap: 15px;
+            width: 100%;
+            max-width: 900px;
+            padding-top: 40px;
+        }
+
+        .footer-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: var(--radius-l);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .footer-btn svg {
+            width: 18px;
+            height: 18px;
+            fill: var(--text-color);
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 { font-size: 1.8rem; }
+            .main-container { flex-direction: column; align-items: center; gap: 30px; }
+            .letter-container { width: 50px; height: 50px; }
+            .word-row { gap: 10px; }
+            .footer { gap: 10px; }
+            .footer-btn { padding: 8px 15px; font-size: 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>WORDLE SOLVER</h1>
+    </header>
+
+    <div class="main-container">
+        <div class="game-panel">
+            <div class="attempts-container" id="attempts"></div>
+            
+            <div class="controls">
+                 <div class="control-buttons">
+                    <button class="control-btn neumorphic-btn" id="addAttemptBtn" onclick="addAttempt()">+ Add Guess</button>
+                    <button class="control-btn neumorphic-btn" onclick="clearAll()">Clear All</button>
+                </div>
+                <div class="keyboard-hint">Click a letter box to set its color</div>
+                <div class="error-message" id="error-message"></div>
+            </div>
+        </div>
+
+        <div class="suggestions-panel">
+            <h3>Possible Words</h3>
+            <div class="stats" id="stats">Enter your guesses to see suggestions.</div>
+            <div class="word-grid" id="wordGrid"></div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <a href="https://twitter.com/intent/tweet?text=Check%20out%20this%20awesome%20Wordle%20Solver!&url=https://xenodd.github.io/Wordle-Solver/" target="_blank" class="footer-btn neumorphic-btn">
+            <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path></svg>
+            Share on X
+        </a>
+        <a href="https://github.com/XenOdd" target="_blank" class="footer-btn neumorphic-btn">
+             <svg viewBox="0 0 24 24"><path d="M12 2C6.475 2 2 6.475 2 12a9.994 9.994 0 0 0 6.838 9.488c.5.087.687-.213.687-.476 0-.237-.013-1.024-.013-1.862-2.512.463-3.162-.612-3.362-1.175-.113-.288-.6-1.175-1.025-1.413-.35-.187-.85-.65-.013-.662.788-.013 1.35.725 1.538 1.025.9 1.512 2.338 1.087 2.912.825.088-.65.35-1.087.638-1.337-2.225-.25-4.55-1.113-4.55-4.938 0-1.088.387-1.987 1.025-2.688-.1-.25-.45-1.275.1-2.65 0 0 .837-.262 2.75 1.026a9.58 9.58 0 0 1 5 0c1.912-1.3 2.75-1.025 2.75-1.025.55 1.375.2 2.4.1 2.65.637.7 1.025 1.6 1.025 2.688 0 3.837-2.337 4.687-4.562 4.937.362.312.675.912.675 1.85 0 1.337-.013 2.412-.013 2.75 0 .262.188.574.688.474A10.016 10.016 0 0 0 22 12c0-5.525-4.475-10-10-10z"></path></svg>
+            Developer
+        </a>
+    </footer>
+
+    <script src="word.js"></script>
+    
+    <script>
+        // JavaScript logic is unchanged.
+        let attemptCount = 0;
+        let attempts = [];
+
+        function addAttempt() {
+            if (attempts.length > 0) {
+                const lastAttempt = attempts[attempts.length - 1];
+                if (lastAttempt.word.some(letter => letter === '')) {
+                    showError('Please complete the current guess.');
+                    return;
+                }
+            }
+            if (attempts.length >= 6) {
+                 showError('Maximum of 6 guesses reached.');
+                 return;
+            }
+
+            attemptCount++;
+            const attemptDiv = document.createElement('div');
+            attemptDiv.className = 'word-row';
+            attemptDiv.innerHTML = `
+                ${Array(5).fill(0).map((_, i) => `
+                    <div class="letter-container" 
+                         onclick="toggleStatus(${attemptCount - 1}, ${i})"
+                         data-attempt="${attemptCount - 1}" data-letter="${i}">
+                        <input type="text" class="letter-cell" maxlength="1" 
+                               oninput="handleInput(${attemptCount - 1}, ${i}, this)" 
+                               onkeydown="handleKeydown(event, ${attemptCount - 1}, ${i})">
+                    </div>
+                `).join('')}
+            `;
+            
+            document.getElementById('attempts').appendChild(attemptDiv);
+            attempts.push({ 
+                word: ['', '', '', '', ''], 
+                status: ['gray', 'gray', 'gray', 'gray', 'gray'],
+                element: attemptDiv
+            });
+            
+            attemptDiv.querySelector('.letter-cell').focus();
+            updateAddButton();
+        }
+
+        function handleInput(attemptIdx, letterIdx, input) {
+            const container = input.parentElement;
+            const value = input.value.toLowerCase().replace(/[^a-z]/g, '');
+            input.value = value;
+            attempts[attemptIdx].word[letterIdx] = value;
+            
+            container.classList.toggle('filled', value !== '');
+            if (value) {
+                const statuses = ['green', 'yellow'];
+                if (!statuses.includes(attempts[attemptIdx].status[letterIdx])) {
+                   attempts[attemptIdx].status[letterIdx] = 'gray';
+                   container.className = 'letter-container filled gray';
+                }
+            }
+            
+            if (value && letterIdx < 4) {
+                const nextInput = container.parentElement.children[letterIdx + 1].querySelector('.letter-cell');
+                nextInput.focus();
+                nextInput.select();
+            }
+            
+            updateSuggestions();
+            updateAddButton();
+        }
+
+        function handleKeydown(event, attemptIdx, letterIdx) {
+            if (event.key === 'Backspace' && !event.target.value && letterIdx > 0) {
+                const prevInput = event.target.closest('.word-row').children[letterIdx - 1].querySelector('.letter-cell');
+                prevInput.focus();
+                prevInput.select();
+            }
+        }
+
+        function toggleStatus(attemptIdx, letterIdx) {
+            const attempt = attempts[attemptIdx];
+            if (!attempt.word[letterIdx]) {
+                showError("Enter a letter before setting status.");
+                return;
+            };
+
+            const container = attempt.element.querySelectorAll('.letter-container')[letterIdx];
+            const statuses = ['gray', 'yellow', 'green'];
+            
+            let currentIdx = statuses.indexOf(attempt.status[letterIdx]);
+            currentIdx = (currentIdx + 1) % statuses.length;
+            
+            const newStatus = statuses[currentIdx];
+            attempt.status[letterIdx] = newStatus;
+
+            container.className = 'letter-container filled';
+            container.classList.add(newStatus);
+            
+            updateSuggestions();
+        }
+
+        function updateAddButton() {
+            const btn = document.getElementById('addAttemptBtn');
+            const canAdd = attempts.length === 0 || 
+                          (attempts.length < 6 && attempts[attempts.length - 1].word.every(letter => letter !== ''));
+            btn.disabled = !canAdd;
+        }
+
+        function clearAll() {
+            document.getElementById('attempts').innerHTML = '';
+            attempts = [];
+            attemptCount = 0;
+            updateSuggestions();
+            addAttempt();
+            updateAddButton();
+            clearError();
+        }
+
+        let errorTimeout;
+        function showError(message) {
+            clearTimeout(errorTimeout);
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+            errorTimeout = setTimeout(clearError, 3000);
+        }
+
+        function clearError() {
+            document.getElementById('error-message').textContent = '';
+        }
+
+        function updateSuggestions() {
+            if (typeof WORD_LIST === 'undefined') {
+                document.getElementById('stats').textContent = 'Error: word.js not loaded.';
+                return;
+            }
+            const possibleWords = filterWords();
+            const rankedWords = rankWords(possibleWords);
+            displayWords(rankedWords);
+        }
+
+        function filterWords() {
+            if (attempts.length === 0 || attempts.every(attempt => attempt.word.every(letter => letter === ''))) {
+                document.getElementById('stats').textContent = `Showing all ${WORD_LIST.length} possible words.`;
+                return WORD_LIST;
+            }
+            return WORD_LIST.filter(word => {
+                return attempts.every(attempt => {
+                    if (attempt.word.some(letter => letter === '')) return true;
+                    
+                    const requiredLetters = {}; 
+                    for(let i=0; i<5; i++){
+                        const letter = attempt.word[i];
+                        if (attempt.status[i] === 'green' || attempt.status[i] === 'yellow') {
+                            requiredLetters[letter] = (requiredLetters[letter] || 0) + 1;
+                        }
+                    }
+
+                    for(let i=0; i<5; i++){
+                        const letter = attempt.word[i];
+                        const status = attempt.status[i];
+                        if (status === 'green') {
+                            if(word[i] !== letter) return false;
+                        } else if (status === 'yellow') {
+                            if(word[i] === letter) return false;
+                        }
+                    }
+
+                    for(const letter in requiredLetters){
+                        const countInWord = word.split(letter).length - 1;
+                        if(countInWord < requiredLetters[letter]) return false;
+                    }
+
+                    for(let i=0; i<5; i++){
+                         const letter = attempt.word[i];
+                         const status = attempt.status[i];
+                         if(status === 'gray' && !requiredLetters[letter]){
+                              const countInWord = word.split(letter).length - 1;
+                              if(countInWord > 0) return false;
+                         }
+                    }
+                    return true;
+                });
+            });
+        }
+        
+        function rankWords(words) {
+            if (words.length <= 1) return words;
+            const letterFrequency = {};
+            "abcdefghijklmnopqrstuvwxyz".split('').forEach(l => letterFrequency[l] = 0);
+            words.forEach(word => {
+                const uniqueLetters = new Set(word.split(''));
+                uniqueLetters.forEach(letter => {
+                    letterFrequency[letter]++;
+                });
+            });
+            return words.map(word => {
+                let score = 0;
+                const uniqueLetters = new Set(word.split(''));
+                uniqueLetters.forEach(letter => {
+                    score += letterFrequency[letter];
+                });
+                return { word, score };
+            }).sort((a, b) => b.score - a.score).map(item => item.word);
+        }
+
+        function displayWords(words) {
+            const wordGrid = document.getElementById('wordGrid');
+            const stats = document.getElementById('stats');
+            
+            if (attempts.length > 0 && !attempts[0].word.some(l => l === '')) {
+                if (words.length === 0) {
+                    wordGrid.innerHTML = '';
+                    stats.textContent = 'No matching words found. Check your inputs.';
+                    return;
+                }
+                stats.textContent = `${words.length} possible word${words.length !== 1 ? 's' : ''} found`;
+            }
+            wordGrid.innerHTML = words.slice(0, 100).map((word, idx) => 
+                `<div class="word-item neumorphic-btn ${idx === 0 ? 'top' : ''}" onclick="copyWord('${word}')" title="Click to fill guess">${word}</div>`
+            ).join('');
+        }
+
+        function copyWord(word) {
+            const currentAttemptIdx = attempts.findIndex(a => a.word.some(l => l === ''));
+            if(currentAttemptIdx !== -1) {
+                const currentAttempt = attempts[currentAttemptIdx];
+                word.split('').forEach((letter, letterIdx) => {
+                    const input = currentAttempt.element.children[letterIdx].querySelector('input');
+                    input.value = letter;
+                    handleInput(currentAttemptIdx, letterIdx, input);
+                });
+                currentAttempt.element.children[4].querySelector('input').focus();
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            clearAll();
+        });
+    </script>
+</body>
+</html>
